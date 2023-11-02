@@ -1,27 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity} from 'react-native';
-import {recipesData} from './Recipes';
-import { useRoute } from '@react-navigation/native';
+import { firestore, collection,getDocs} from './firebase/Config';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 export default function RecipeListScreen({navigation})  {
     const route = useRoute();
     const { selectedIngredients, limitations } = route.params;
+    const [recipes, setRecipes] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    
 
-    const filteredRecipes = recipesData.filter(recipe => {
+    useEffect(() => {
+      const fetchRecipes = async () => {
+        const querySnapshot = await getDocs(collection(firestore, 'recipes'));
+        const recipesData = [];
+        querySnapshot.forEach((doc) => {
+          recipesData.push(doc.data());
+        });
+        setRecipes(recipesData);
+        setIsLoading(false);
+      };
+  
+      fetchRecipes();
+    }, []);
+    
+
+    const filteredRecipes = recipes.filter(recipe => {
         const ingredientsMatch = selectedIngredients.every(ingredient =>
           recipe.ingredients.includes(ingredient)
         );
       
-        const dietaryMatch =
-          limitations === 'Select limitation' || recipe.dietary.includes(limitations);
+        const limitationsMatch = limitations.every(limitation =>
+          recipe.limitations.includes(limitation)
+        );
       
-        return ingredientsMatch && dietaryMatch;
+        return ingredientsMatch && limitationsMatch;
       });
 
 
       return (
         <View style={styles.container}>
-          {selectedIngredients.length > 0 ? (
+          {isLoading ? ( 
+        <Text>Loading recipes...</Text>
+      ) : (
+          selectedIngredients.length > 0 ? (
             filteredRecipes.length > 0 ? (
               <View>
                 <Text style={styles.header}>Here are your recipes!</Text>
@@ -29,9 +51,9 @@ export default function RecipeListScreen({navigation})  {
                   data={filteredRecipes}
                   keyExtractor={(item) => item.name}
                   renderItem={({ item }) => (
-                    <View>
-                      <Text style={styles.text}>{item.name}</Text>
-                    </View>
+                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Description', { recipe: item })}>
+                      <Text style={styles.buttonText}>{item.name}</Text>
+                    </TouchableOpacity>
                   )}
                 />
               </View>
@@ -40,8 +62,9 @@ export default function RecipeListScreen({navigation})  {
             )
           ) : (
             <Text style={styles.header1}>Please pick something!</Text>
+          )
           )}
-          <TouchableOpacity onPress={() => navigation.navigate('Main')} style={styles.button}>
+          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={styles.button}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -98,4 +121,3 @@ const styles = StyleSheet.create({
     }
   
   }); 
-  

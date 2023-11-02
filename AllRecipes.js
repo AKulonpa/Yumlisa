@@ -1,10 +1,24 @@
-import React from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity} from 'react-native';
-import {recipesData} from './Recipes';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
+import { firestore, collection, getDocs } from './firebase/Config';
 import { useRoute } from '@react-navigation/native';
 
 export default function AllRecipes({navigation})  {
     const route = useRoute();
+    const [recipes, setRecipes] = useState([]);
+
+    useEffect(() => {
+      const fetchRecipes = async () => {
+        const querySnapshot = await getDocs(collection(firestore, 'recipes'));
+        const recipesData = [];
+        querySnapshot.forEach((doc) => {
+          recipesData.push(doc.data());
+        });
+        setRecipes(recipesData);
+      };
+  
+      fetchRecipes();
+    }, []);
 
     const renderItem = ({ item }) => (
         <Text style={styles.text}>{item.name}</Text>
@@ -12,13 +26,12 @@ export default function AllRecipes({navigation})  {
    
       return (
         <View style={styles.container}>
-        <View>
-          <Text style={styles.header}>Here are all recipes!</Text>
-          <FlatList
-            data={recipesData}
-            renderItem={renderItem}
-          />
-        </View>
+      <Text style={styles.header}>Here are all recipes!</Text>
+      <FlatList
+        data={recipes}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.name}
+      />
       <TouchableOpacity onPress={() => navigation.navigate('Main')} style={styles.button}>
         <Text style={styles.buttonText}>Go Back</Text>
       </TouchableOpacity>
@@ -73,6 +86,7 @@ const styles = StyleSheet.create({
     buttonText: {
       color: '#fff',
       textAlign: 'center',
+      fontSize: 25,
     }
   
   }); 
